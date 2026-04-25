@@ -8,7 +8,7 @@ CineClique is a full-fledged movie recommendation engine built on a **Neo4j Grap
 * **Live Posters**: Connects securely to the OMDB API to fetch live movie posters with built-in backend caching to avoid rate-limiting.
 * **Neo4j Native Integration**: The backend interfaces directly with Neo4j using Cypher queries and GDS projections in-memory.
 
-## 🏗 Architecture
+## Architecture
 * **Frontend**: Vanilla HTML/CSS/JS (Served dynamically by Flask).
 * **Backend**: Python with Flask (`app.py`).
 * **Database**: Neo4j (using `neo4j` Python driver).
