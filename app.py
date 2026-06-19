@@ -40,26 +40,32 @@ NEO4J_USER = os.getenv("NEO4J_USER") or os.getenv("NEO4J_USERNAME") or "neo4j"
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
 
 driver = None
+gds_available = False
 
 def get_db_driver():
     """Initialize and return the Neo4j driver."""
-    global driver
+    global driver, gds_available
     if not driver:
         try:
             driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
             # Verify connectivity on initialization
             driver.verify_connectivity()
             
-            # Ensure GDS graph is in memory for PageRank
-            with driver.session() as session:
-                res = session.run("CALL gds.graph.exists('movie_network') YIELD exists").single()
-                if not res["exists"]:
-                    print("Loading GDS Graph into memory (movie_network)...")
-                    session.run("CALL gds.graph.project('movie_network', '*', { acted_in: {orientation: 'UNDIRECTED'}, worked_in: {orientation: 'UNDIRECTED'}, genre_is: {orientation: 'UNDIRECTED'} })").consume()
-            
-            print("Successfully connected to Neo4j database and loaded GDS.")
+            # Ensure GDS graph is in memory for PageRank if supported
+            try:
+                with driver.session() as session:
+                    res = session.run("CALL gds.graph.exists('movie_network') YIELD exists").single()
+                    if not res["exists"]:
+                        print("Loading GDS Graph into memory (movie_network)...")
+                        session.run("CALL gds.graph.project('movie_network', '*', { acted_in: {orientation: 'UNDIRECTED'}, worked_in: {orientation: 'UNDIRECTED'}, genre_is: {orientation: 'UNDIRECTED'} })").consume()
+                gds_available = True
+                print("Successfully connected to Neo4j database and loaded GDS.")
+            except Exception as gds_err:
+                gds_available = False
+                print(f"GDS is not available (falling back to pure Cypher recommendations): {gds_err}")
+                
         except Exception as e:
-            print(f"Failed to connect to Neo4j or load GDS: {e}")
+            print(f"Failed to connect to Neo4j: {e}")
             driver = None
     return driver
 
@@ -433,43 +439,85 @@ def recommend_movies():
     if not db_driver:
          return jsonify({"error": "Database connection failed. Ensure Neo4j is running."}), 500
 
-    # Natively Execute Community-Biased Personalized PageRank Algorithm + Collaborative Filtering
-    query = """
-    MATCH (input:Movie) WHERE input.id IN $movie_ids OR input.title IN $movie_titles
-    WITH collect(input) AS seeds, collect(DISTINCT input.community_id) AS seed_comms
+    global gds_available
+    if gds_available:
+        # Natively Execute Community-Biased Personalized PageRank Algorithm + Collaborative Filtering
+        query = """
+        MATCH (input:Movie) WHERE input.id IN $movie_ids OR input.title IN $movie_titles
+        WITH collect(input) AS seeds, collect(DISTINCT input.community_id) AS seed_comms
+        
+        // 1. Run stream PageRank simulating walkers emanating natively from the chosen seeds
+        CALL gds.pageRank.stream('movie_network', {
+            sourceNodes: seeds,
+            maxIterations: 20,
+            dampingFactor: 0.85
+        })
+        YIELD nodeId, score
+        WITH gds.util.asNode(nodeId) AS rec, score, seed_comms
+        
+        // Filter out the inputs themselves and limit to Movies
+        WHERE rec:Movie AND NOT rec.id IN $movie_ids AND NOT rec.title IN $movie_titles
+        
+        // The "Soft Boundary": Substantially penalize any node that isn't part of the user's selected communities
+        WITH rec, score, seed_comms,
+             CASE WHEN rec.community_id IN seed_comms THEN 1.0 ELSE 0.2 END AS community_multiplier
+        WITH rec, score * community_multiplier AS pr_score
     
-    // 1. Run stream PageRank simulating walkers emanating natively from the chosen seeds
-    CALL gds.pageRank.stream('movie_network', {
-        sourceNodes: seeds,
-        maxIterations: 20,
-        dampingFactor: 0.85
-    })
-    YIELD nodeId, score
-    WITH gds.util.asNode(nodeId) AS rec, score, seed_comms
-    
-    // Filter out the inputs themselves and limit to Movies
-    WHERE rec:Movie AND NOT rec.id IN $movie_ids AND NOT rec.title IN $movie_titles
-    
-    // The "Soft Boundary": Substantially penalize any node that isn't part of the user's selected communities
-    WITH rec, score, seed_comms,
-         CASE WHEN rec.community_id IN seed_comms THEN 1.0 ELSE 0.2 END AS community_multiplier
-    WITH rec, score * community_multiplier AS pr_score
-
-    // 2. Collaborative Filtering (Find similar users who liked the rec)
-    OPTIONAL MATCH (u:User {id: $user_id})-[r1:RATED]->(m:Movie)<-[r2:RATED]-(similarUser:User)-[r3:RATED]->(rec)
-    WHERE r1.rating >= 4 AND r2.rating >= 4 AND r3.rating >= 4
-    WITH rec, pr_score, count(DISTINCT similarUser) AS cf_matches
-    
-    // Final composite score (Boost heavily if similar users liked it)
-    WITH rec, pr_score * (1.0 + (cf_matches * 0.3)) AS final_score, cf_matches
-    ORDER BY final_score DESC
-    LIMIT 10
-    
-    RETURN rec.id AS id, 
-           rec.title AS title, 
-           round(final_score * 100000) AS match_score,
-           cf_matches
-    """
+        // 2. Collaborative Filtering (Find similar users who liked the rec)
+        OPTIONAL MATCH (u:User {id: $user_id})-[r1:RATED]->(m:Movie)<-[r2:RATED]-(similarUser:User)-[r3:RATED]->(rec)
+        WHERE r1.rating >= 4 AND r2.rating >= 4 AND r3.rating >= 4
+        WITH rec, pr_score, count(DISTINCT similarUser) AS cf_matches
+        
+        // Final composite score (Boost heavily if similar users liked it)
+        WITH rec, pr_score * (1.0 + (cf_matches * 0.3)) AS final_score, cf_matches
+        ORDER BY final_score DESC
+        LIMIT 10
+        
+        RETURN rec.id AS id, 
+               rec.title AS title, 
+               round(final_score * 100000) AS match_score,
+               cf_matches
+        """
+    else:
+        # Fallback: Execute a pure Cypher recommendation query based on shared community and genres
+        query = """
+        MATCH (input:Movie) WHERE input.id IN $movie_ids OR input.title IN $movie_titles
+        WITH collect(input) AS seeds, collect(DISTINCT input.community_id) AS seed_comms
+        
+        // Find candidates sharing same communities
+        OPTIONAL MATCH (rec:Movie)
+        WHERE NOT rec IN seeds AND rec.community_id IN seed_comms
+        WITH seeds, seed_comms, collect(rec) AS comm_candidates
+        
+        // Find candidates sharing genres
+        OPTIONAL MATCH (input)-[:genre_is]->(g:Genre)<-[:genre_is]-(rec:Movie)
+        WHERE input IN seeds AND NOT rec IN seeds
+        WITH seeds, seed_comms, comm_candidates + collect(rec) AS all_candidates
+        
+        UNWIND all_candidates AS rec
+        WITH DISTINCT rec, seed_comms WHERE rec IS NOT NULL
+        
+        // Calculate shared genres count
+        OPTIONAL MATCH (rec)-[:genre_is]->(g:Genre)<-[:genre_is]-(input)
+        WHERE input IN seeds
+        WITH rec, seed_comms, count(DISTINCT g) AS shared_genres,
+             CASE WHEN rec.community_id IN seed_comms THEN 1.0 ELSE 0.2 END AS community_multiplier
+        
+        // Collaborative Filtering (similar users who liked the candidate)
+        OPTIONAL MATCH (u:User {id: $user_id})-[r1:RATED]->(m:Movie)<-[r2:RATED]-(similarUser:User)-[r3:RATED]->(rec)
+        WHERE r1.rating >= 4 AND r2.rating >= 4 AND r3.rating >= 4
+        WITH rec, shared_genres, community_multiplier, count(DISTINCT similarUser) AS cf_matches
+        
+        // Compute composite score (boosted by global rating, community matching and collaborative filtering)
+        WITH rec, (shared_genres * 10.0 + coalesce(rec.rating, 0.0) * 2.0) * community_multiplier * (1.0 + (cf_matches * 0.3)) AS final_score, cf_matches
+        ORDER BY final_score DESC
+        LIMIT 10
+        
+        RETURN rec.id AS id, 
+               rec.title AS title, 
+               round(final_score * 100) AS match_score,
+               cf_matches
+        """
     
     try:
         with db_driver.session() as session:
