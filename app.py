@@ -495,7 +495,7 @@ def recommend_movies():
         WITH seeds, seed_comms, comm_candidates + collect(rec) AS all_candidates
         
         UNWIND all_candidates AS rec
-        WITH DISTINCT rec, seed_comms WHERE rec IS NOT NULL
+        WITH DISTINCT rec, seed_comms, seeds WHERE rec IS NOT NULL
         
         // Calculate shared genres count
         OPTIONAL MATCH (rec)-[:genre_is]->(g:Genre)<-[:genre_is]-(input)
