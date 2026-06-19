@@ -17,7 +17,7 @@ import datetime
 load_dotenv()
 
 app = Flask(__name__, static_folder='frontend')
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-dev-secret-123')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY') or os.getenv('JWT_SECRET') or 'default-dev-secret-123'
 # Enable CORS for frontend integration
 CORS(app)
 
