@@ -492,7 +492,8 @@ def recommend_movies():
         // Find candidates sharing genres
         OPTIONAL MATCH (input)-[:genre_is]->(g:Genre)<-[:genre_is]-(rec:Movie)
         WHERE input IN seeds AND NOT rec IN seeds
-        WITH seeds, seed_comms, comm_candidates + collect(rec) AS all_candidates
+        WITH seeds, seed_comms, comm_candidates, collect(rec) AS genre_candidates
+        WITH seeds, seed_comms, comm_candidates + genre_candidates AS all_candidates
         
         UNWIND all_candidates AS rec
         WITH DISTINCT rec, seed_comms, seeds WHERE rec IS NOT NULL
