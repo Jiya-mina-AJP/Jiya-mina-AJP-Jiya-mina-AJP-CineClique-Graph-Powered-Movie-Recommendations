@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Movie Recommendation System - Add and view your favorite movies">
+    <title>Movie Recommendation System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Side: Search Area -->
+        <main class="main-content">
+            <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>CineClique<span class="gradient-text">.</span></h1>
+                    <p>Discover and build your personalized movie network.</p>
+                </div>
+                <div class="user-profile" style="text-align: right; margin-right: 20px; display: flex; align-items: center; gap: 15px;">
+                    <div id="login-status" style="font-size: 14px; color: #10b981;">Loading user...</div>
+                    <button id="logout-btn" style="padding: 6px 12px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: white; cursor: pointer; font-family: 'Bebas Neue', cursive; font-size: 14px; letter-spacing: 1px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">Logout</button>
+                </div>
+            </header>
+
+            <section class="search-section">
+                <h2>Add to your collection</h2>
+                <div class="search-container" id="search-container">
+                    <!-- SearchDropdown component will render here -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Right Side: Added Movies Panel -->
+        <aside class="side-panel">
+            <header class="panel-header" style="flex-direction: column; align-items: stretch; padding: 15px 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 id="panel-title">Your Collection</h2>
+                    <span class="movie-count" id="movie-count">0</span>
+                </div>
+                <div class="tabs" style="display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+                    <button id="tab-collection" class="tab-btn active" style="background:none; border:none; color:#c2a878; font-family:'Bebas Neue',cursive; font-size:20px; cursor:pointer; padding-bottom:5px; border-bottom: 2px solid #c2a878; transition: color 0.2s;">Collection</button>
+                    <button id="tab-watchlist" class="tab-btn" style="background:none; border:none; color:#94a3b8; font-family:'Bebas Neue',cursive; font-size:20px; cursor:pointer; padding-bottom:5px; border-bottom: 2px solid transparent; transition: color 0.2s;">Watchlist</button>
+                </div>
+            </header>
+            <div class="movie-list" id="movie-list">
+                <!-- MoviePanel component will render here -->
+                <div class="empty-state">
+                    <p>No movies added yet. Search and select a movie to get started!</p>
+                </div>
+            </div>
+            <div class="panel-footer" style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                <button id="get-recommendations-btn" style="width: 100%; padding: 15px; border-radius: var(--radius-md); background: var(--accent-gradient); color: #121212; border: none; font-weight: 700; font-size: 18px; font-family: 'Bebas Neue', cursive; letter-spacing: 2px; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">Get Recommendations</button>
+            </div>
+        </aside>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

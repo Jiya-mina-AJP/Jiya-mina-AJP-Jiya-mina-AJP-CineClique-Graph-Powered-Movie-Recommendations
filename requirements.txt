@@ -1,0 +1,7 @@
+flask
+flask-cors
+neo4j
+python-dotenv
+bcrypt
+PyJWT
+gunicorn

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo4j Movie Recommender</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+        .container { background-color: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input { padding: 10px; width: 60%; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        button { padding: 10px 20px; background-color: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #005a9e; }
+        pre { background: #2d2d2d; color: #ccc; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; font-family: monospace; }
+        .error { color: #d8000c; background-color: #ffd2d2; padding: 10px; border-radius: 4px; margin-bottom: 15px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Movie Recommender Tester</h1>
+        <p>Test your Flask + Neo4j backend directly from the browser.</p>
+        
+        <div id="errorBox" class="error"></div>
+
+        <div style="margin-bottom: 20px;">
+            <input type="text" id="movieTitle" placeholder="e.g. The Matrix" value="The Matrix">
+            <button onclick="getRecommendations()">Get Recommendations</button>
+        </div>
+
+        <h3>Response:</h3>
+        <pre id="output">Waiting for request...</pre>
+    </div>
+
+    <script>
+        async function getRecommendations() {
+            const title = document.getElementById('movieTitle').value;
+            const output = document.getElementById('output');
+            const errorBox = document.getElementById('errorBox');
+            
+            if (!title) {
+                alert('Please enter a movie title');
+                return;
+            }
+
+            output.textContent = 'Loading recommendations...';
+            errorBox.style.display = 'none';
+
+            try {
+                // Connecting to the Flask backend running on port 5002
+                const response = await fetch('http://127.0.0.1:5002/api/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ titles: [title] })
+                });
+
+                const data = await response.json();
+                output.textContent = JSON.stringify(data, null, 2);
+
+            } catch (error) {
+                errorBox.style.display = 'block';
+                errorBox.textContent = "Network Error! Make sure app.py is running in the background.";
+                output.textContent = error.toString();
+            }
+        }
+    </script>
+</body>
+</html>

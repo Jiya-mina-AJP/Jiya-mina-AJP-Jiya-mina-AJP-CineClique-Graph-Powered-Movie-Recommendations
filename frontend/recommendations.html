@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Your Personalized Movie Recommendations">
+    <title>Recommendations - CineClique</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+        .rec-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .header-nav {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+            color: #c2a878;
+        }
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            margin-right: 20px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .rec-card {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .rec-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .rec-poster-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+        }
+        .rec-poster {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #334155;
+        }
+        .bookmark-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .bookmark-btn:hover {
+            background: rgba(139, 92, 246, 0.8);
+            transform: scale(1.1);
+        }
+        .bookmark-btn.bookmarked {
+            background: #8b5cf6;
+            color: #fff;
+        }
+        .rec-content {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .rec-title {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .rec-score {
+            margin-top: auto;
+            color: #10b981;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .loading-state, .error-state {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 18px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="rec-container">
+        <div class="header-nav">
+            <a href="/" class="back-btn">← Back to Search</a>
+            <header class="app-header" style="margin:0;">
+                <h1>CineClique<span class="gradient-text">.</span></h1>
+            </header>
+        </div>
+
+        <h2>Recommended for You</h2>
+        <p style="color: #94a3b8; margin-bottom: 30px;">Based on your selected movies, here are the top recommendations derived from shared cast and crew.</p>
+
+        <div id="results-container" class="results-grid">
+            <div class="loading-state">
+                Generating your personalized network recommendations...
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/recommend.js"></script>
+</body>
+</html>
