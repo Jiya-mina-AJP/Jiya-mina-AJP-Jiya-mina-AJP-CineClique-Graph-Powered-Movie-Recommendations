@@ -62,7 +62,7 @@ def get_db_driver():
                 print("Successfully connected to Neo4j database and loaded GDS.")
             except Exception as gds_err:
                 gds_available = False
-                print(f"GDS is not available (falling back to pure Cypher recommendations): {gds_err}")
+                print("Note: GDS is not supported on this Neo4j instance. Falling back to pure Cypher recommendations.")
                 
         except Exception as e:
             print(f"Failed to connect to Neo4j: {e}")
